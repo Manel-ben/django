@@ -76,10 +76,10 @@ WSGI_APPLICATION = 'idlTp3.wsgi.application'
 DATABASES = {
     'default': { 
         'ENGINE': 'django.db.backends.postgresql', 
-        'NAME': 'tp3idldb', 
-        'USER': 'postgres', 
-        'PASSWORD': 'amanihdr11', 
-        'HOST': '127.0.0.1', 
+        'NAME': 'student_uu1i', 
+        'USER': 'student_uu1i_user', 
+        'PASSWORD': 'CX0qxLnMSV51ir5f5y8tsdDAkaJQ9fwU', 
+        'HOST': 'dpg-d4ino5ali9vc73emomug-a', 
         'PORT': '5432',
     }
 }
