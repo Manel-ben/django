@@ -1,10 +1,9 @@
-# ÉTAPE 1 : BUILDER
+# ÉTAPE 1 : BUILDER (Pour installer les dépendances et réduire la taille de l'image finale)
 # Utilise une image Python complète pour construire l'environnement et installer les dépendances.
 FROM python:3.11 AS builder
 
-# Définit la variable d'environnement pour ne pas écrire les fichiers .pyc
+# Configuration de l'environnement Python
 ENV PYTHONDONTWRITEBYTECODE 1
-# Désactive la mise en mémoire tampon de la sortie standard et d'erreur pour les logs en temps réel
 ENV PYTHONUNBUFFERED 1
 
 # Définit le répertoire de travail dans le conteneur.
@@ -14,11 +13,10 @@ WORKDIR /usr/src/app
 # On copie uniquement ce fichier en premier pour profiter de la mise en cache de Docker.
 COPY requirements.txt .
 
-# Installe les dépendances dans le répertoire virtuel caché (__pypackages__).
-# L'option --no-cache-dir réduit la taille de la couche.
+# Installe les dépendances. L'option --no-cache-dir réduit la taille de la couche.
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ÉTAPE 2 : RUNTIME (IMAGE FINALE, LÉGÈRE)
+# ÉTAPE 2 : RUNTIME (IMAGE FINALE, LÉGÈRE ET OPTIMISÉE POUR LA PRODUCTION)
 # Utilise une image Python 'slim' qui est beaucoup plus petite pour la production.
 FROM python:3.11-slim
 
@@ -26,21 +24,23 @@ FROM python:3.11-slim
 WORKDIR /usr/src/app
 
 # Copie les dépendances installées par l'étape 'builder' vers le répertoire de travail.
-# Cela garantit que toutes les bibliothèques sont présentes.
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
-# Copie le reste du code de l'application (le point . représente le dossier où se trouve le Dockerfile).
+# Copie le reste du code de l'application (tous les fichiers du répertoire où se trouve le Dockerfile).
 COPY . .
 
-# Exécute la collecte des fichiers statiques de Django
-# NOTE : Remplacez 'votre_projet' par le nom du dossier qui contient settings.py et wsgi.py
+# AJUSTEMENT CRUCIAL POUR L'EXÉCUTION DES COMMANDES DJANGO :
+# Le module de settings est maintenant correctement défini :
+ENV DJANGO_SETTINGS_MODULE=idlTp3.settings
+
+# Exécute la collecte des fichiers statiques de Django.
+# Cette étape ne devrait plus échouer grâce à la variable DJANGO_SETTINGS_MODULE.
 RUN python manage.py collectstatic --noinput
 
-# Expose le port par défaut pour Gunicorn. Render utilisera de toute façon $PORT.
+# Expose le port par défaut pour Gunicorn (bien que Render utilise la variable $PORT).
 EXPOSE 8000
 
 # Commande de démarrage du service Gunicorn.
-# Vous DEVEZ remplacer 'votre_projet' par le nom du dossier qui contient votre wsgi.py (e.g., 'mysite').
-# L'utilisation de 4 workers est un bon point de départ, ajustez selon la RAM disponible.
-# La liaison à 0.0.0.0 permet d'écouter sur toutes les interfaces réseau.
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "votre_projet.wsgi:application"]
+# Le chemin vers le fichier wsgi est corrigé :
+# Utilise la variable d'environnement $PORT fournie par Render (ou par défaut 8000 si non définie)
+CMD ["gunicorn", "--bind", "0.0.0.0:${PORT:-8000}", "--workers", "4", "idlTp3.wsgi:application"]
