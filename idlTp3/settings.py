@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os  # <-- AJOUTÉ : Importation du module os pour lire les variables d'environnement
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'students', # the name of our application
+    'students',  # the name of our application
 ]
 
 MIDDLEWARE = [
@@ -72,17 +73,29 @@ WSGI_APPLICATION = 'idlTp3.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+# Lancement de collectstatic échouait car il essayait de se connecter à la DB.
+# Cette logique utilise une DB in-memory temporaire si la variable COLLECTSTATIC_IGNORE_DB est définie.
 
-DATABASES = {
-    'default': { 
-        'ENGINE': 'django.db.backends.postgresql', 
-        'NAME': 'student_uu1i', 
-        'USER': 'student_uu1i_user', 
-        'PASSWORD': 'CX0qxLnMSV51ir5f5y8tsdDAkaJQ9fwU', 
-        'HOST': 'dpg-d4ino5ali9vc73emomug-a', 
-        'PORT': '5432',
+if os.environ.get('COLLECTSTATIC_IGNORE_DB', 'False') == 'True':
+    # Configuration temporaire pour la construction Docker (collectstatic)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
     }
-}
+else:
+    # Configuration réelle pour la production (PostgreSQL)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'student_uu1i',
+            'USER': 'student_uu1i_user',
+            'PASSWORD': 'CX0qxLnMSV51ir5f5y8tsdDAkaJQ9fwU',
+            'HOST': 'dpg-d4ino5ali9vc73emomug-a',
+            'PORT': '5432',
+        }
+    }
 
 
 # Password validation
@@ -120,6 +133,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
